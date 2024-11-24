@@ -2,8 +2,7 @@
 
 # get the current directory
 FILE_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) ; pwd)
-VSCODE_DIR=$(cd $FILE_DIR/../../.vscode ; pwd)
-VSCODE_SETTINGS=$VSCODE_DIR/settings.json
+VSCODE_DIR=$FILE_DIR/../../.vscode
 
 # if the code executable, exists, use it to install the required extensions
 if ! command -v code 2>&1 >/dev/null; then
@@ -18,10 +17,15 @@ code --install-extension torokati44.glspc
 echo "Setting up 'glspc' for LLVM"
 
 LLLSP_PATH=$(cd $FILE_DIR/../../server ; pwd)/lllsp
+if [ ! -d $VSCODE_DIR ]; then
+  echo "Creating directory $VSCODE_DIR"
+  mkdir -p $VSCODE_DIR
+  VSCODE_DIR=$(cd $VSCODE_DIR ; pwd)
+fi
+VSCODE_SETTINGS=$VSCODE_DIR/settings.json
 if [ ! -f $VSCODE_SETTINGS ]; then
   # if the settings don't already exist, just create them
   echo "Creating new settings"
-  mkdir -p $VSCODE_DIR
   touch $VSCODE_SETTINGS
   echo "{" >> $VSCODE_SETTINGS
   echo "  \"glspc.serverPath\": \"$LLLSP_PATH\"," >> $VSCODE_SETTINGS

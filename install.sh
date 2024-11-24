@@ -3,7 +3,11 @@
 FILE_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) ; pwd)
 
 # Make virtual env
-python3 -m venv $FILE_DIR/.venv
+if [ ! -d $FILE_DIR/.venv ]; then
+  echo "Creating Python venv"
+  python3 -m venv $FILE_DIR/.venv
+fi
+echo "Install Python dependencies"
 $FILE_DIR/.venv/bin/pip install -r $FILE_DIR/server/dev-requirements.txt -r $FILE_DIR/server/runtime-requirements.txt
 
 # Install editor support
