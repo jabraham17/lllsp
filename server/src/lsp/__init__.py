@@ -31,6 +31,21 @@ def lsprng_to_rng(rng: lsT.Range):
 def lsploc_to_loc(loc: lsT.Location):
     return location.Location(loc.uri, lsprng_to_rng(loc.range))
 
+def range_to_lines(rng: location.Range, lines: List[str]) -> List[str]:
+    if rng.start.line == rng.end.line:
+        return [lines[rng.start.line][rng.start.column:(rng.end.column-rng.start.column)]]
+    
+    res = [
+        lines[rng.start.line][rng.start.column:]
+    ]
+    for idx in range(rng.start.line+1, rng.end.line):
+        res.append(lines[idx])
+    res.append(lines[rng.end.line][:rng.end.column])
+    return res
+
+def range_to_text(rng: location.Range, lines: List[str]) -> str:
+    return "\n".join(range_to_lines(rng, lines))
+
 @dataclass
 class LSPIRName:
     """
@@ -71,6 +86,22 @@ class FileInfo:
         resolve a name to its definition, if any
         """
         return self.module.resolve(n.name)
+    
+    @property
+    def filename(self):
+        return self.uri.removeprefix("file://")
+
+    # @functools.lru_cache(maxsize=None)
+    def _lines(self):
+        with open(self.filename, "r") as f:
+            return f.readlines()
+
+    def lines(self, rng: Optional[location.Range]) -> List[str]:
+        lines = self._lines()
+        if rng:
+            return range_to_lines(rng, lines)
+        return lines
+
         
 
 
@@ -80,7 +111,7 @@ class LLLSP(LanguageServer):
 
         self.files: Dict[str, FileInfo] = dict()
 
-    def file_info(self, uri: str, rebuild=False):
+    def file_info(self, uri: str, rebuild=False) -> FileInfo:
 
         if rebuild or uri not in self.files:
             filename = uri.removeprefix("file://")
@@ -106,6 +137,7 @@ def run_lsp():
     @server.feature(lsT.TEXT_DOCUMENT_DID_OPEN)
     async def did_open(ls: LLLSP, params: lsT.DidOpenTextDocumentParams):
         uri = params.text_document.uri
+        # TODO: instead of using the uri, can I avoid file IO overhead by parsing the string? does it matter that much?
         fi = ls.file_info(uri)
 
 
@@ -158,12 +190,34 @@ def run_lsp():
             # TODO add a module.references()
         return locs
 
+    @server.feature(lsT.TEXT_DOCUMENT_HOVER)
+    async def hover(ls: LLLSP, params: lsT.HoverParams):
+        text_doc = ls.workspace.get_text_document(params.text_document.uri)
+        fi = ls.file_info(text_doc.uri)
+
+        pos = params.position
+
+
+        log("hover")
+        if seg := fi.find_name_segment(pos):
+            log("seg", seg)
+            if i := fi.resolve(seg):
+                log("i", i)
+                loc = i.location
+                # get the first line of the location
+                line = fi.lines(loc.rng)[0].strip()
+                content = lsT.MarkedString_Type1("llvm", line)
+                hov = lsT.Hover(content, rng_to_lsprng(loc.rng))
+                return hov
+        return None
+
     @server.feature(lsT.TEXT_DOCUMENT_DOCUMENT_SYMBOL)
     async def doc_sym(ls: LLLSP, params: lsT.DocumentSymbolParams):
         text_doc = ls.workspace.get_text_document(params.text_document.uri)
         fi = ls.file_info(text_doc.uri)
 
         si = []
+        # TODO: actually implement this
         for i in fi.functions():
             s = lsT.SymbolInformation(loc_to_lsploc(i.location), i.name.basename(), lsT.SymbolKind.Function)
             si.append(s)
