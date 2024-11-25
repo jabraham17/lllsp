@@ -45,10 +45,10 @@ class IRParser:
             reader.through("\n")
             return None
         elif c == "d":
-            c2 = reader.peek(3)
-            if c2 == "def":
+            c3 = reader.peek(3)
+            if c3 == "def":
                 return self._parse_define(reader)
-            elif c2 == "dec":
+            elif c3 == "dec":
                 return self._parse_declare(reader)
             else:
                 # TODO: what should we do in this case? some kind of warning?
@@ -58,6 +58,10 @@ class IRParser:
             return self._parse_percent_named(reader)
         elif c == "@":
             return self._parse_constant(reader)
+        elif c == "a":
+            return self._parse_attribute(reader)
+        elif c == "!":
+            return self._parse_metadata(reader)
         else:
             # TODO : implement
             reader.through("\n")
@@ -72,14 +76,18 @@ class IRParser:
         reader.through("\n")
 
     def _read_curly_block(self, reader: Reader) -> str:
+        return self._read_block(reader, "{", "}")
+
+
+    def _read_block(self, reader: Reader, start: str, end:str) -> str:
         text = ""
-        text += reader.through("{")
+        text += reader.through(start)
         pairs = 1
         while True:
-            text += reader.until("}{")
+            text += reader.until(start+end)
             n = reader.read()
             text += n
-            if n == "{":
+            if n == start:
                 pairs += 1
             else:
                 pairs -= 1
@@ -158,6 +166,44 @@ class IRParser:
         c = ir.Constant(loc, name)
         return c
 
+    def _parse_attribute(self, reader: Reader) -> Optional[ir.Attribute]:
+        start = reader.position()
+        reader.until("#")
+
+        name = ir.AttributeName(*reader.until_loc("= "))
+        reader.through("=")
+        reader.until("{")
+
+        body = self._read_curly_block(reader)
+
+        end = reader.position()
+        loc = Location(reader.filename, Range(start, end))
+        return ir.Attribute(loc, name)
+
+    def _parse_metadata(self, reader: Reader) -> Optional[ir.Metadata]:
+        start = reader.position()
+
+        name = ir.MetadataName(*reader.until_loc("= "))
+        reader.through("=")
+        reader.until("!d")
+        if reader.peek(3) == "dis":
+            # get rid of the distinct by reading to space
+            reader.until(" !")
+            reader.skip(" \t")
+        # we now should have "!"
+        if reader.read() != "!":
+            return None
+        reader.skip(" \t")
+        if reader.peek() == "{":
+            self._read_curly_block(reader)
+        else:
+            # we assume its a paren-like thing
+            self._read_block(reader, "(", ")")
+
+        end = reader.position()
+        loc = Location(reader.filename, Range(start, end))
+        return ir.Metadata(loc, name)
+
     def _parse_percent_named(self, reader: Reader) -> Optional[ir.IR]:
         start = reader.position()
         name = ir.ValueName(*reader.until_loc(" ="))
@@ -192,36 +238,10 @@ class NameParser:
     def __init__(self):
         self._name_regex = re.compile(r"([%#@!])[a-zA-Z0-9_.]+")
 
-    # this version is too slow
-    # def parse(self, reader: Reader) -> List[ir.Name]:
-    #     names: List[ir.Name] = []
-    #     while not reader.eof():
-    #         # TODO: this does not handle strings yet
-
-    #         try:
-    #             text = reader.until("%#@:!")
-    #         except EOFException:
-    #             break
-    #         c = reader.peek()
-    #         if c == ":":
-    #             # if its a ":", we need to go back
-    #             # TODO: unimp
-    #             reader.read(1)
-    #         else:
-    #             name_types = {
-    #                 "%": ir.ValueName,
-    #                 "#": ir.AttributeName,
-    #                 "@": ir.SymbolName,
-    #                 "!": ir.MetadataName,
-    #             }
-    #             ty = name_types[c]
-    #             n = ty(*reader.readr_loc(self._name_regex))
-    #             names.append(n)
-    #     return names
-
     def parse(self, reader: Reader) -> List[ir.Name]:
         names: List[ir.Name] = []
         lines = reader.readlines()
+        # TODO: this doesn't handle ':'
         name_types = {
                     "%": ir.ValueName,
                     "#": ir.AttributeName,

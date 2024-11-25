@@ -131,7 +131,7 @@ def run_lsp():
             if i := fi.resolve(seg):
                 log("i", i)
                 loc = i.location
-                if isinstance(i, (ir.Function, ir.TypeDefinition, ir.Metadata, ir.Constant)):
+                if isinstance(i, (ir.Function, ir.TypeDefinition, ir.Metadata, ir.Constant, ir.Attribute)):
                     loc = i.name.location
                 elif isinstance(i,  ir.StatementWithValue):
                     loc = i.value.location

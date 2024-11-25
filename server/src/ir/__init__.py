@@ -122,7 +122,6 @@ class StatementWithValue(Statement):
 class Function(IR, metaclass=abc.ABCMeta):
     name: SymbolName
     # formals: List[Formal]
-    # attribute: Optional[AttributeName]
     
     def add(self, i: IR):
         raise ValueError("don't know how to add that")
@@ -180,6 +179,7 @@ class Module(IR):
     constants: List[Constant] = field(default_factory=list)
     functions: List[Function] = field(default_factory=list)
     metadata: List[Metadata] = field(default_factory=list)
+    attributes: List[Attribute] = field(default_factory=list)
 
 
     def add(self, i: IR):
@@ -195,6 +195,8 @@ class Module(IR):
             self.functions.append(i)
         elif isinstance(i, Metadata):
             self.metadata.append(i)
+        elif isinstance(i, Attribute):
+            self.attributes.append(i)
         else:
             raise ValueError("don't know how to add that")
 
@@ -218,10 +220,14 @@ class Module(IR):
             for c in itertools.chain(self.functions, self.constants):
                 if i.name == c.name.name:
                     return c
-        elif isinstance(i, Metadata):
+        elif isinstance(i, MetadataName):
             for m in self.metadata:
                 if i.name == m.name.name:
                     return m
+        elif isinstance(i, AttributeName):
+            for a in self.attributes:
+                if i.name == a.name.name:
+                    return a
                 
         return None
 
