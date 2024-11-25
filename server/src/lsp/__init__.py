@@ -33,7 +33,7 @@ def lsploc_to_loc(loc: lsT.Location):
 
 def range_to_lines(rng: location.Range, lines: List[str]) -> List[str]:
     if rng.start.line == rng.end.line:
-        return [lines[rng.start.line][rng.start.column:(rng.end.column-rng.start.column)]]
+        return [lines[rng.start.line][rng.start.column:rng.end.column]]
     
     res = [
         lines[rng.start.line][rng.start.column:]
@@ -204,6 +204,7 @@ def run_lsp():
             if i := fi.resolve(seg):
                 log("i", i)
                 loc = i.location
+                log(loc.rng)
                 # get the first line of the location
                 line = fi.lines(loc.rng)[0].strip()
                 content = lsT.MarkedString_Type1("llvm", line)

@@ -10,6 +10,8 @@ from ir.location import Location, Range, Position
 from .reader import Reader, EOFException
 
 import sys
+
+
 def log(*args, **kwargs):
     print(*args, **kwargs, file=sys.stderr)
 
@@ -19,6 +21,9 @@ class IRParser:
     def __init__(self):
         self._value_name_regex = re.compile(r"^ *(%[a-zA-Z0-9_.]+)")
         self._label_regex = re.compile(r"^ *([a-zA-Z0-9_.]+:)")
+        self._formal_regex = re.compile(
+            r"\(?\s*([^,]*(%[a-zA-Z0-9_.]+)[^,()]*)(?=,|\))?"
+        )
 
     def parse(self, reader: Reader) -> ir.Module:
 
@@ -33,7 +38,6 @@ class IRParser:
         # patch the location and return
         mod.location = Location(reader.filename, Range(start, end))
         return mod
-
 
     def parse_one(self, reader: Reader):
         reader.skip(" \t")
@@ -67,7 +71,6 @@ class IRParser:
             reader.through("\n")
             return None
 
-
     def _parse_comment(self, reader: Reader):
         c = reader.read()
         if c != ";":
@@ -78,13 +81,12 @@ class IRParser:
     def _read_curly_block(self, reader: Reader) -> str:
         return self._read_block(reader, "{", "}")
 
-
-    def _read_block(self, reader: Reader, start: str, end:str) -> str:
+    def _read_block(self, reader: Reader, start: str, end: str) -> str:
         text = ""
         text += reader.through(start)
         pairs = 1
         while True:
-            text += reader.until(start+end)
+            text += reader.until(start + end)
             n = reader.read()
             text += n
             if n == start:
@@ -95,34 +97,89 @@ class IRParser:
                 break
         return text
 
-    def _parse_statements(self, reader: Reader) -> List[ir.Statement | ir.Label]:
+    def _parse_statements(
+        self, reader: Reader
+    ) -> List[ir.Statement | ir.Label]:
         # parse all statements inside of curly braces
-        start = reader.position() # used to determine line info
+        start = reader.position()  # used to determine line info
         text = self._read_curly_block(reader)
         # split text based on newlines
         lines = text.splitlines()
         statements = []
         for lineno, l in enumerate(lines):
             if m := re.match(self._value_name_regex, l):
-                start_col = start.column + m.start(1) if lineno == 0 else m.start(1)
-                name_end_col = start.column + m.end(1) if lineno == 0 else m.end(1)
+                start_col = (
+                    start.column + m.start(1) if lineno == 0 else m.start(1)
+                )
+                name_end_col = (
+                    start.column + m.end(1) if lineno == 0 else m.end(1)
+                )
                 end_col = start.column + len(l) if lineno == 0 else len(l)
-                name_start = Position(start_col, start.line+lineno)
-                name_end = Position(name_end_col, start.line+lineno)
-                stmt_end = Position(end_col, start.line+lineno)
-                name = ir.ValueName(Location(reader.filename, Range(name_start, name_end)), m.group(1))
-                statements.append(ir.StatementWithValue(Location(reader.filename, Range(name_start, stmt_end)), name))
+                name_start = Position(start_col, start.line + lineno)
+                name_end = Position(name_end_col, start.line + lineno)
+                stmt_end = Position(end_col, start.line + lineno)
+                name = ir.ValueName(
+                    Location(reader.filename, Range(name_start, name_end)),
+                    m.group(1),
+                )
+                statements.append(
+                    ir.StatementWithValue(
+                        Location(reader.filename, Range(name_start, stmt_end)),
+                        name,
+                    )
+                )
             elif m := re.match(self._label_regex, l):
-                start_col = start.column + m.start(1) if lineno == 0 else m.start(1)
-                name_end_col = start.column + m.end(1) if lineno == 0 else m.end(1)
-                name_start = Position(start_col, start.line+lineno)
-                name_end = Position(name_end_col, start.line+lineno)
-                label = ir.Label(Location(reader.filename, Range(name_start, name_end)), m.group(1))
+                start_col = (
+                    start.column + m.start(1) if lineno == 0 else m.start(1)
+                )
+                name_end_col = (
+                    start.column + m.end(1) if lineno == 0 else m.end(1)
+                )
+                name_start = Position(start_col, start.line + lineno)
+                name_end = Position(name_end_col, start.line + lineno)
+                label = ir.Label(
+                    Location(reader.filename, Range(name_start, name_end)),
+                    m.group(1),
+                )
                 statements.append(label)
             else:
                 # for now, no need to handle statements that don't have values
                 pass
         return statements
+
+    def _parse_formals(self, reader: Reader) -> List[ir.Formal]:
+        # parse everything in the ()
+        start = reader.position()  # used to determine line info
+        text = self._read_block(reader, "(", ")")
+        if len(text.strip().removeprefix("(").removesuffix(")").strip()) == 0:
+            return []
+        # split based on ','
+        # TODO: what if there are other commands in an arg attribute?
+
+        formals = []
+        for m in re.finditer(self._formal_regex, text):
+            start_col = start.column + m.start(1)
+            end_col = start.column + m.end(1)
+            name_start_col = start.column + m.start(2)
+            name_end_col = start.column + m.end(2)
+            
+            name_start = Position(name_start_col, start.line)
+            name_end = Position(name_end_col, start.line)
+            name = ir.ValueName(
+                Location(reader.filename, Range(name_start, name_end)),
+                m.group(2),
+            )
+            start_formal = Position(start_col, start.line)
+            end_formal = Position(end_col, start.line)
+            formals.append(
+                ir.Formal(
+                    Location(
+                        reader.filename, Range(start_formal, end_formal)
+                    ),
+                    name,
+                )
+            )
+        return formals
 
     def _parse_define(self, reader: Reader) -> Optional[ir.Define]:
         start = reader.position()
@@ -130,28 +187,27 @@ class IRParser:
 
         name = ir.SymbolName(*reader.until_loc("( "))
 
-        # TODO parse args
-        reader.through(")")
+        formals = self._parse_formals(reader)
         stmts = self._parse_statements(reader)
 
         end = reader.position()
         loc = Location(reader.filename, Range(start, end))
-        d = ir.Define(loc, name, stmts)
+        d = ir.Define(loc, name, formals, stmts)
         return d
-    
+
     def _parse_declare(self, reader: Reader) -> Optional[ir.Declare]:
         start = reader.position()
         reader.until("@")
 
         name = ir.SymbolName(*reader.until_loc("( "))
-        
-        # TODO: this does not handle multiline declare
-        reader.through("\n")
 
+        # TODO: this does not handle multiline declare
+        formals = self._parse_formals(reader)
+        reader.through("\n")
 
         end = reader.position()
         loc = Location(reader.filename, Range(start, end))
-        d = ir.Declare(loc, name)
+        d = ir.Declare(loc, name, formals)
         return d
 
     def _parse_constant(self, reader: Reader) -> Optional[ir.Constant]:
@@ -207,7 +263,7 @@ class IRParser:
     def _parse_percent_named(self, reader: Reader) -> Optional[ir.IR]:
         start = reader.position()
         name = ir.ValueName(*reader.until_loc(" ="))
-        
+
         # consume =
         reader.through("=")
         reader.skip(" \t")
@@ -229,7 +285,6 @@ class IRParser:
             return s
 
 
-
 class NameParser:
     """
     Parse and extract everything that looks like a name
@@ -243,11 +298,11 @@ class NameParser:
         lines = reader.readlines()
         # TODO: this doesn't handle ':'
         name_types = {
-                    "%": ir.ValueName,
-                    "#": ir.AttributeName,
-                    "@": ir.SymbolName,
-                    "!": ir.MetadataName,
-                }
+            "%": ir.ValueName,
+            "#": ir.AttributeName,
+            "@": ir.SymbolName,
+            "!": ir.MetadataName,
+        }
         for lineno, l in enumerate(lines):
             for m in re.finditer(self._name_regex, l):
                 ty = name_types[m.group(1)]
@@ -256,6 +311,3 @@ class NameParser:
                 loc = Location(reader.filename, Range(start, end))
                 names.append(ty(loc, m.group(0)))
         return names
-
-
-

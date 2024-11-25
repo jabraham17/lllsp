@@ -100,7 +100,6 @@ class TypeDefinition(IR):
 @dataclass
 class Formal(IR):
     name: ValueName
-    type_: BareName
 
 
 @dataclass
@@ -121,23 +120,18 @@ class StatementWithValue(Statement):
 @dataclass
 class Function(IR, metaclass=abc.ABCMeta):
     name: SymbolName
-    # formals: List[Formal]
-    
-    def add(self, i: IR):
-        raise ValueError("don't know how to add that")
+    formals: List[Formal]
 
     def resolve(self, i: Name):
+        for f in self.formals:
+            import sys
+            if i.name == f.name.name:
+                return f
         return None
 
 @dataclass
 class Define(Function):
     statements: List[Statement | Label]
-
-    def add(self, i: IR):
-        if isinstance(i, (Statement, Label)):
-            self.statements.append(i)
-        else:
-            super().add(i)
     
     def resolve(self, i: Name):
         if x := super().resolve(i):
@@ -205,7 +199,7 @@ class Module(IR):
         Return the IR element this name refers to
         """
         if isinstance(i, ValueName):
-            # it could be a typedef or a statement in a function
+            # it could be a typedef or a statement in a function or a formal
             for f in self.functions:
                 if i.location.rng in f.location.rng:
                     if res := f.resolve(i):
