@@ -1,7 +1,8 @@
-from typing import Optional, Any, List
+from typing import Optional, Any, List, Sequence
 from dataclasses import dataclass, field
 import abc
 from .location import Location
+import itertools
 
 
 @dataclass
@@ -31,7 +32,7 @@ class Name(IR, metaclass=abc.ABCMeta):
 @dataclass
 class BareName(Name):
     """
-    A bare identifer, like 'i64'
+    A bare identifier, like 'i64'
     """
 
     def basename(self) -> str:
@@ -49,9 +50,9 @@ class ValueName(Name):
 
 
 @dataclass
-class FunctionName(Name):
+class SymbolName(Name):
     """
-    @-prefixed names, also used for constants
+    @-prefixed names, used for functions and constants
     """
 
     def basename(self) -> str:
@@ -118,15 +119,37 @@ class StatementWithValue(Statement):
 
 
 @dataclass
-class Function(IR):
-    name: FunctionName
+class Function(IR, metaclass=abc.ABCMeta):
+    name: SymbolName
     # formals: List[Formal]
     # attribute: Optional[AttributeName]
+    
+    def add(self, i: IR):
+        raise ValueError("don't know how to add that")
 
+    def resolve(self, i: Name):
+        return None
 
 @dataclass
 class Define(Function):
     statements: List[Statement | Label]
+
+    def add(self, i: IR):
+        if isinstance(i, (Statement, Label)):
+            self.statements.append(i)
+        else:
+            super().add(i)
+    
+    def resolve(self, i: Name):
+        if x := super().resolve(i):
+            return x
+    
+        for s in self.statements:
+            if isinstance(s, Label) and s.name.removesuffix(":") == i.name.removeprefix("%"):
+                return s
+            elif isinstance(s, StatementWithValue) and s.value.name == i.name:
+                return s
+        return None
 
 
 @dataclass
@@ -136,7 +159,7 @@ class Declare(Function):
 
 @dataclass
 class Constant(IR):
-    name: FunctionName
+    name: SymbolName
 
 
 @dataclass
@@ -151,9 +174,54 @@ class Attribute(IR):
 
 @dataclass
 class Module(IR):
-    source_filename: SourceFilename
-    target_info: List[TargetString]
-    types: List[TypeDefinition]
-    constants: List[Constant]
-    functions: List[Function]
-    metadata: List[Metadata]
+    source_filename: Optional[SourceFilename] = field(default=None)
+    target_info: List[TargetString] = field(default_factory=list)
+    types: List[TypeDefinition] = field(default_factory=list)
+    constants: List[Constant] = field(default_factory=list)
+    functions: List[Function] = field(default_factory=list)
+    metadata: List[Metadata] = field(default_factory=list)
+
+
+    def add(self, i: IR):
+        if isinstance(i, SourceFilename):
+            self.source_filename = i
+        elif isinstance(i, TargetString):
+            self.target_info.append(i)
+        elif isinstance(i, TypeDefinition):
+            self.types.append(i)
+        elif isinstance(i, Constant):
+            self.constants.append(i)
+        elif isinstance(i, Function):
+            self.functions.append(i)
+        elif isinstance(i, Metadata):
+            self.metadata.append(i)
+        else:
+            raise ValueError("don't know how to add that")
+
+    def resolve(self, i: Name) -> Optional[IR]:
+        """
+        Return the IR element this name refers to
+        """
+        if isinstance(i, ValueName):
+            # it could be a typedef or a statement in a function
+            for f in self.functions:
+                if i.location.rng in f.location.rng:
+                    if res := f.resolve(i):
+                        return res
+                    
+            # if we get here, its a typedef
+            for t in self.types:
+                if i.name == t.name.name:
+                    return t
+        elif isinstance(i, SymbolName):
+            # it could be a constant or function
+            for c in itertools.chain(self.functions, self.constants):
+                if i.name == c.name.name:
+                    return c
+        elif isinstance(i, Metadata):
+            for m in self.metadata:
+                if i.name == m.name.name:
+                    return m
+                
+        return None
+

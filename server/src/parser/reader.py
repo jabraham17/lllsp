@@ -3,7 +3,7 @@ from typing import Optional, Any, List, Tuple
 from dataclasses import dataclass, field
 import io
 import os
-
+import re
 from ir.location import Position, Location, Range
 
 
@@ -85,6 +85,8 @@ from ir.location import Position, Location, Range
 
     
 
+class EOFException(Exception):
+    pass
 
 class Peeker:
 
@@ -133,12 +135,17 @@ class FileReader:
 
     def __exit__(self, *args):
         self.close()
+    
+    def readall(self) -> str:
+        return self._fp.read()
 
+    def readlines(self) -> List[str]:
+        return self._fp.readlines()
 
     def read(self, n=1) -> str:
         ret = self._fp.read(n)
         if len(ret) != n:
-            raise ValueError("EOF")
+            raise EOFException()
         self._stats.count(ret)
         return ret
 
@@ -146,13 +153,13 @@ class FileReader:
         with Peeker(self._fp):
             ret = self._fp.read(n)
         if len(ret) != n:
-            raise ValueError("EOF")
+            raise EOFException()
         return ret
 
     def eof(self) -> bool:
         return self._fp.tell() >= self._size
 
-    def skip(self, chars=" \t\n"):
+    def skip(self, chars=" \t\n") -> str:
         read = ""
         while True:
             c = self._fp.read(1)
@@ -170,7 +177,7 @@ class FileReader:
         while True:
             c = self._fp.read(1)
             if c == "":
-                raise ValueError("char not found")
+                raise EOFException()
             if c in chars:
                 self._fp.seek(self._fp.tell() - 1, os.SEEK_SET)
                 break
@@ -181,7 +188,32 @@ class FileReader:
     def until_loc(self, chars: str) -> Tuple[Location, str]:
         start = self.position()
         read = self.until(chars)
-        end = self.position().mod_col(-1)
+        end = self.position()
+        return Location(self.filename, Range(start, end)), read
+
+    def readr(self, pat: str | re.Pattern[str]) -> str:
+        read = ""
+        if isinstance(pat, str):
+            pat = re.compile(pat)
+        matched = False
+        while True:
+            c = self._fp.read(1)
+            if c == "":
+                raise EOFException()
+            m = re.fullmatch(pat, read+c)
+            if not matched and m is not None:
+                matched = True
+            elif matched and m is None:
+                self._fp.seek(self._fp.tell() - 1, os.SEEK_SET)
+                break
+            read += c
+        self._stats.count(read)
+        return read
+
+    def readr_loc(self, pat: str | re.Pattern[str]) -> Tuple[Location, str]:
+        start = self.position()
+        read = self.readr(pat)
+        end = self.position()
         return Location(self.filename, Range(start, end)), read
 
     def through(self, chars: str) -> str:
@@ -189,7 +221,7 @@ class FileReader:
         while True:
             c = self._fp.read(1)
             if c == "":
-                raise ValueError("char not found")
+                raise EOFException()
             read += c
             if c in chars:
                 break
@@ -198,7 +230,6 @@ class FileReader:
     
     def position(self) -> Position:
         return Position(self._stats.col, self._stats.line)
-
 
 # Reader = FileReader | TextReader
 Reader = FileReader
