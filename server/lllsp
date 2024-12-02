@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-
-# get the current directory
-FILE_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) ; pwd)
-
-PYTHON=$(cd $FILE_DIR/../.venv/bin ; pwd)/python3
-RUN_SCRIPT=$FILE_DIR/src/__init__.py
-
-$PYTHON $RUN_SCRIPT

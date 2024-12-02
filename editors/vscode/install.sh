@@ -16,7 +16,7 @@ code --install-extension torokati44.glspc
 
 echo "Setting up 'glspc' for LLVM"
 
-LLLSP_PATH=$(cd $FILE_DIR/../../server ; pwd)/lllsp
+LLLSP_PATH=$(cd $FILE_DIR/../../.venv/bin ; pwd)/lllsp
 if [ ! -d $VSCODE_DIR ]; then
   echo "Creating directory $VSCODE_DIR"
   mkdir -p $VSCODE_DIR

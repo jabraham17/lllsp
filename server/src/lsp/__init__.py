@@ -1,13 +1,13 @@
 import lsprotocol.types as lsT
 from pygls.server import LanguageServer
 from dataclasses import dataclass, field
-import ir.location as location
-from parser import IRParser, NameParser
-from parser.reader import Reader
+import lllsp.ir.location as location
+from lllsp.parser import IRParser, NameParser
+from lllsp.parser.reader import Reader
 from typing import List, Dict, Iterable, Tuple, Optional
-import ir
+import lllsp.ir as ir
 import sys
-from segments import PositionList
+from lllsp.segments import PositionList
 import functools
 
 def log(*args, **kwargs):

@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lllsp"
+version = "0.0.5"
+authors = [{ name = "Jade Abraham" }]
+license = { file = "LICENSE" }
+description = "A small example package"
+readme = "README.md"
+dependencies = ["pygls>=1.3.1"]
+requires-python = ">=3.8"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/jabraham17/lllsp"
+Issues = "https://github.com/jabraham17/lllsp/issues"
+
+
+[project.scripts]
+lllsp = "lllsp.cli:run"
+
+[tool.setuptools]
+packages = ["lllsp", "lllsp.ir", "lllsp.lsp", "lllsp.parser", "lllsp.segments"]
+
+[tool.setuptools.package-dir]
+lllsp = "src"

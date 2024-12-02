@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 import io
 import os
 import re
-from ir.location import Position, Location, Range
+from lllsp.ir.location import Position, Location, Range
 
 
 

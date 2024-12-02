@@ -5,8 +5,8 @@ import os
 import abc
 import re
 
-import ir
-from ir.location import Location, Range, Position
+import lllsp.ir as ir
+from lllsp.ir.location import Location, Range, Position
 from .reader import Reader, EOFException
 
 import sys
