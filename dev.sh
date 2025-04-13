@@ -7,8 +7,6 @@ if [ ! -d $FILE_DIR/.venv ]; then
   echo "Creating Python venv"
   python3 -m venv $FILE_DIR/.venv
 fi
-echo "Installing server"
+echo "Install Python dependencies"
+$FILE_DIR/.venv/bin/pip install -r $FILE_DIR/server/dev-requirements.txt
 $FILE_DIR/.venv/bin/pip install $FILE_DIR/server/
-
-# Install editor support
-$FILE_DIR/editors/vscode/install.sh
