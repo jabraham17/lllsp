@@ -22,7 +22,7 @@
     "llvm"
   ],
   "main": "./out/extension.js",
-  "icon": "./icons/LLVMWyvernSmall.png",
+  "icon": "icons/LLVMWyvernSmall.png",
   "contributes": {
     "commands": [
       {
