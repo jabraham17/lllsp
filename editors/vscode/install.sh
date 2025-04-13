@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+if [[ -z "$LLLSP_USE_OLD_INSTALL" ]]; then
+  echo "This script is deprecated. Please use the proper extension."
+  exit 1
+fi
+
 # get the current directory
 FILE_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) ; pwd)
 VSCODE_DIR=$FILE_DIR/../../.vscode
