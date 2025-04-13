@@ -1,0 +1,7 @@
+**/*.ts
+**/tsconfig.json
+bin
+**/.eslintrc.json
+.vscode
+**/.gitignore
+scripts
