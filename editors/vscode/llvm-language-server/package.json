@@ -9,6 +9,11 @@
   "author": {
     "name": "Jade Abraham"
   },
+  "license": "Apache-2.0",
+  "repository": {
+    "url": "https://github.com/jabraham17/lllsp",
+    "type": "git"
+  },
   "categories": [
     "Programming Languages",
     "Other"
