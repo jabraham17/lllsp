@@ -1,0 +1,6 @@
+max_width = 80
+tab_spaces = 2
+# imports_granularity = "Module"
+# unstable_features = true
+# format_macro_matchers = true
+# format_macro_bodies = true
