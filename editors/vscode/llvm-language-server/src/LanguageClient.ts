@@ -22,7 +22,7 @@ import * as fs from "fs";
 import * as vscode from "vscode";
 import * as vlc from "vscode-languageclient/node";
 import * as path from "path";
-import {EXTENSION_TOOL} from "./constants";
+import {EXTENSION_TOOL, EXTENSION_TOOL2} from "./constants";
 
 export enum LanguageClientState {
   DISABLED,
@@ -119,8 +119,10 @@ export class LanguageClient {
     this.statusBarItem.hide();
 
 
-    let command = this.python_path;
-    let args = [EXTENSION_TOOL];
+    // let command = this.python_path;
+    // let args = [EXTENSION_TOOL];
+    let command = EXTENSION_TOOL2;
+    let args: string[] = [];
 
     this.logger.info(`${this.name} command: '${command}'`);
     this.logger.info(`${this.name} args: '${args}'`);
