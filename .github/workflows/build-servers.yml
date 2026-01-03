@@ -69,4 +69,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lllsp-server2-all
-          path: artifacts/lllsp-server2-all.tar.gz
+          path: lllsp-server2-all.tar.gz
