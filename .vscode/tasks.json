@@ -5,8 +5,7 @@
       "type": "npm",
       "script": "watch",
       "group": {
-        "kind": "build",
-        "isDefault": true
+        "kind": "build"
       },
       "problemMatcher": "$tsc-watch",
       "isBackground": true,
@@ -16,6 +15,30 @@
       },
       "options": {
         "cwd": "${workspaceFolder}/editors/vscode/llvm-language-server"
+      }
+    }
+    ,
+    {
+      "type": "npm",
+      "script": "make_bundled",
+      "group": "build",
+      "problemMatcher": [],
+      "label": "npm: make_bundled",
+      "options": {
+        "cwd": "${workspaceFolder}/editors/vscode/llvm-language-server"
+      }
+    },
+    {
+      "label": "defaultBuildTask",
+      "dependsOn": [
+        "npm: watch",
+        "npm: make_bundled"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
       }
     }
   ]

@@ -44,7 +44,7 @@
     "vscode:prepublish": "npm run compile && npm run make_bundled",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "make_bundled": "./scripts/make_bundled.sh",
+    "make_bundled": "./scripts/make_bundled2.sh",
     "check-types": "tsc --noEmit",
     "lint": "eslint src --ext ts"
   },

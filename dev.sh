@@ -9,4 +9,4 @@ if [ ! -d $FILE_DIR/.venv ]; then
 fi
 echo "Install Python dependencies"
 $FILE_DIR/.venv/bin/pip install -r $FILE_DIR/server/dev-requirements.txt
-$FILE_DIR/.venv/bin/pip install $FILE_DIR/server/
+# $FILE_DIR/.venv/bin/pip install $FILE_DIR/server/

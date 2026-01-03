@@ -1,0 +1,72 @@
+name: Build Servers For Release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-servers-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        # windows-latest, windows-11-arm
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Rust
+        run: rustup update stable && rustup default stable
+      - name: Build project
+        run: |
+          cd server2
+          cargo build --verbose --all-targets --release
+
+      - name: Package binary with target triple
+        run: |
+          cd server2
+          HOST_TRIPLE=$(rustc -vV | sed -n 's/^host: //p')
+          OUTNAME=server2-$HOST_TRIPLE
+          cp target/release/server2 "$OUTNAME"
+          chmod +x "$OUTNAME"
+          echo "Packaged $OUTNAME"
+
+      - name: Upload results
+        # if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'jabraham17/lllsp'
+        uses: actions/upload-artifact@v4
+        with:
+          name: server2-${{ matrix.os }}
+          path: |
+            server2/server2-*
+
+  package:
+    needs: build
+    # if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'jabraham17/lllsp'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: List downloaded files
+        run: ls -la artifacts
+      - name: Create aggregated tarball
+        run: |
+          mkdir executables
+          find artifacts -type f -name 'server2-*' -exec cp {} executables/ \;
+          TARNAME=lllsp-server2-all.tar.gz
+          
+          chmod +x executables/* || true
+          tar -czf "$TARNAME" -C executables .
+          ls -l "$TARNAME"
+      - name: Upload aggregated tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: lllsp-server2-all
+          path: lllsp-server2-all.tar.gz
