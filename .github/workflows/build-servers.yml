@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest, windows-11-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Rust
+        run: rustup update stable && rustup default stable
+      - name: Build project
+        run: cd server2 && cargo build --verbose --all-targets --release
+      - name: Upload results
+        # if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'jabraham17/lllsp'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lllsp-server2-${{ matrix.os }}
+          path: |
+            server2/target/release/server2*
