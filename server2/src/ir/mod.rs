@@ -210,11 +210,11 @@ impl Function {
       Function::Define(d) => &d.formals,
       Function::Declare(de) => &de.formals,
     };
-        for f in formals {
-          if f.name.basename() == i.basename() {
-            return Some(IRNode::Formal(f.clone()));
-          }
-        }
+    for f in formals {
+      if f.name.basename() == i.basename() {
+        return Some(IRNode::Formal(f.clone()));
+      }
+    }
     if let Function::Define(d) = self {
       return d.resolve(i);
     }

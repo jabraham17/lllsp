@@ -65,7 +65,6 @@ fn resolve_bar() {
   expected_checker(name_to_resolve);
 }
 
-
 #[test]
 fn resolve_iaddr_for_bar() {
   let mut reader = ir_file("simple");
@@ -79,13 +78,13 @@ fn resolve_iaddr_for_bar() {
   println!("Resolving {:?}", name_to_resolve);
 
   let resolved = module.resolve(name_to_resolve);
-    assert!(resolved.is_some());
-    let resolved = resolved.unwrap();
-    match resolved {
-      IRNode::Statement(s) => {
-        assert_eq!(s.location.rng.start.line, ln(9));
-        assert_eq!(s.value.basename(), "i.addr");
-      }
-      _ => panic!("Expected IRNode::Constant"),
+  assert!(resolved.is_some());
+  let resolved = resolved.unwrap();
+  match resolved {
+    IRNode::Statement(s) => {
+      assert_eq!(s.location.rng.start.line, ln(9));
+      assert_eq!(s.value.basename(), "i.addr");
     }
+    _ => panic!("Expected IRNode::Constant"),
+  }
 }

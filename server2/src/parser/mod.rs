@@ -140,8 +140,8 @@ impl IRParser {
     let lines: Vec<&str> = text.lines().collect();
     let mut stmts = Vec::new();
     for (lineno, l) in lines.iter().enumerate() {
-
-      if let Some(m) = self.value_name_re.captures(l.as_bytes()).ok().flatten() {
+      if let Some(m) = self.value_name_re.captures(l.as_bytes()).ok().flatten()
+      {
         let m = m.get(1).unwrap();
         let start_col = if lineno == 0 {
           start.column + m.start()
@@ -176,7 +176,9 @@ impl IRParser {
           value: name,
         };
         stmts.push(ir::StatementOrLabel::Stmt(s));
-      } else if let Some(m) = self.label_re.captures(l.as_bytes()).ok().flatten() {
+      } else if let Some(m) =
+        self.label_re.captures(l.as_bytes()).ok().flatten()
+      {
         let m = m.get(1).unwrap();
         let start_col = if lineno == 0 {
           start.column + m.start()
