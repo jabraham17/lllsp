@@ -58,13 +58,12 @@ jobs:
         run: ls -la artifacts
       - name: Create aggregated tarball
         run: |
-          cd artifacts
+          mkdir executables
+          find artifacts -type f -name 'server2-*' -exec cp {} executables/ \;
           TARNAME=lllsp-server2-all.tar.gz
-          for f in server2-* ; do
-            [ -f "$f" ] || continue
-            chmod +x "$f"
-          done
-          tar -czf "$TARNAME" server2-*
+          
+          chmod +x executables/* || true
+          tar -czf "$TARNAME" -C executables .
           ls -l "$TARNAME"
       - name: Upload aggregated tarball
         uses: actions/upload-artifact@v4
